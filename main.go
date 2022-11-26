@@ -15,6 +15,7 @@ func main() {
 		Name: "kafka-cli",
 		Commands: []*cli.Command{
 			cmd.ShowTopicCommand(),
+			cmd.CreateTopicCommand(),
 		},
 	}
 	err := app.Run(os.Args)

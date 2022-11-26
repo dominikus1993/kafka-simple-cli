@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/Shopify/sarama"
 	"github.com/dominikus1993/kafka-simple-cli/internal/kafka"
 	"github.com/k0kubun/pp/v3"
 	"github.com/urfave/cli/v2"
@@ -35,6 +36,22 @@ func showTopicCommandAction(context *cli.Context) error {
 	return fmt.Errorf("number of topic informations should be 1")
 }
 
+func createTopicCommandAction(context *cli.Context) error {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	admin, err := kafka.NewKafkaAdmin(context.String("broker"))
+	if err != nil {
+		return err
+	}
+	err = admin.CreateTopic(context.String("topic"), &sarama.TopicDetail{NumPartitions: int32(context.Int("partitions")), ReplicationFactor: int16(context.Int("replication"))}, false)
+	logger.Info("topic:", zap.Int("retention", context.Int("retention")))
+	if err != nil {
+		return err
+	}
+	logger.Info("topic created")
+	return nil
+}
+
 func ShowTopicCommand() *cli.Command {
 	return &cli.Command{
 		Name: "show",
@@ -55,5 +72,45 @@ func ShowTopicCommand() *cli.Command {
 		Aliases: []string{"s"},
 		Usage:   "show topic info",
 		Action:  showTopicCommandAction,
+	}
+}
+
+func CreateTopicCommand() *cli.Command {
+	return &cli.Command{
+		Name: "create",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "broker",
+				Value:    "broker:9092",
+				Usage:    "kafka broker addres",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "topic",
+				Value:    "topic-name",
+				Usage:    "topic-name",
+				Required: true,
+			},
+			&cli.IntFlag{
+				Name:     "partitions",
+				Value:    1,
+				Usage:    "number of partitions",
+				Required: true,
+			},
+			&cli.IntFlag{
+				Name:     "replication",
+				Value:    1,
+				Usage:    "replication factor",
+				Required: true,
+			},
+			&cli.IntFlag{
+				Name:  "retention",
+				Value: 2137,
+				Usage: "retention time in miliseconds",
+			},
+		},
+		Aliases: []string{"c"},
+		Usage:   "show topic info",
+		Action:  createTopicCommandAction,
 	}
 }
