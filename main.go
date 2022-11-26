@@ -16,6 +16,7 @@ func main() {
 		Commands: []*cli.Command{
 			cmd.ShowTopicCommand(),
 			cmd.CreateTopicCommand(),
+			cmd.ConsumeTopicCommand(),
 		},
 	}
 	err := app.Run(os.Args)
