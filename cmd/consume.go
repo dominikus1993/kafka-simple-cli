@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/dominikus1993/kafka-simple-cli/internal/kafka"
 	"github.com/urfave/cli/v2"
@@ -30,7 +29,7 @@ func consumeTopicCommandAction(context *cli.Context) error {
 			// server-side rebalance happens, the consumer session will need to be
 			// recreated to get the new claims
 			if err := consumer.Consume(ctx, []string{context.String("topic")}, kafkaconsumer); err != nil {
-				log.Panicf("Error from consumer: %v", err)
+				logger.With(zap.Error(err)).Panic("error from consumer")
 			}
 			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {

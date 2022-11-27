@@ -17,6 +17,7 @@ func main() {
 			cmd.ShowTopicCommand(),
 			cmd.CreateTopicCommand(),
 			cmd.ConsumeTopicCommand(),
+			cmd.PublishTopicCommand(),
 		},
 	}
 	err := app.Run(os.Args)

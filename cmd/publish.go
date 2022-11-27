@@ -2,58 +2,41 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"strings"
 
+	"github.com/Shopify/sarama"
 	"github.com/dominikus1993/kafka-simple-cli/internal/kafka"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
+func close(producer sarama.SyncProducer, logger *zap.Logger) {
+	if err := producer.Close(); err != nil {
+		logger.With(zap.Error(err)).Error("failed to shut down data collector cleanly")
+	}
+}
 func publishTopicCommandAction(context *cli.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
-	consumer, err := kafka.NewConsumer(context.String("broker"), context.String("topic"), context.String("groupid"))
+	producer, err := kafka.NewProducer(strings.Split(context.String("broker"), ","))
 	if err != nil {
 		return err
 	}
-	wg, ctx := errgroup.WithContext(context.Context)
-	ready := make(chan bool)
-	kafkaconsumer := kafka.NewKafkaConsumer(ready, logger)
+
+	defer close(producer, logger)
+
+	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: sarama.StringEncoder(context.String("message"))})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to sent message; %w", err)
 	}
-	wg.Go(func() error {
-		for {
-			// `Consume` should be called inside an infinite loop, when a
-			// server-side rebalance happens, the consumer session will need to be
-			// recreated to get the new claims
-			if err := consumer.Consume(ctx, []string{context.String("topic")}, kafkaconsumer); err != nil {
-				log.Panicf("Error from consumer: %v", err)
-			}
-			// check if context was cancelled, signaling that the consumer should stop
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			kafkaconsumer.SetReady(make(chan bool))
-		}
-	})
 
-	<-kafkaconsumer.Ready // Await till the consumer has been set up
-	logger.Info("Sarama consumer up and running!...")
-
-	if err = wg.Wait(); err != nil {
-		return fmt.Errorf("error in some async task: %w", err)
-	}
-	if err = consumer.Close(); err != nil {
-		return fmt.Errorf("error closing client: %w", err)
-	}
+	logger.With(zap.Int32("partition", partition), zap.Int64("offset", offset)).Info("message sent")
 	return nil
 }
 
 func PublishTopicCommand() *cli.Command {
 	return &cli.Command{
-		Name: "consume",
+		Name: "publish",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "broker",
@@ -68,14 +51,14 @@ func PublishTopicCommand() *cli.Command {
 				Required: true,
 			},
 			&cli.StringFlag{
-				Name:     "groupid",
+				Name:     "message",
 				Value:    "xd",
 				Usage:    "kafka consumer group id",
 				Required: true,
 			},
 		},
-		Aliases: []string{"cs"},
-		Usage:   "consume topic ",
-		Action:  consumeTopicCommandAction,
+		Aliases: []string{"p"},
+		Usage:   "publish message to specyfied topic ",
+		Action:  publishTopicCommandAction,
 	}
 }

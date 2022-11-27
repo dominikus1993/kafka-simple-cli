@@ -9,7 +9,7 @@ import (
 
 func NewConsumer(broker, topic, group string) (sarama.ConsumerGroup, error) {
 	config := sarama.NewConfig()
-
+	config.ClientID = group
 	return sarama.NewConsumerGroup(strings.Split(broker, ","), group, config)
 }
 
