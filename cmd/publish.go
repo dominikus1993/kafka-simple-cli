@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 
@@ -19,12 +19,11 @@ func close(producer sarama.SyncProducer, logger *zap.Logger) {
 	}
 }
 
-func getMessage(context *cli.Context) (sarama.StringEncoder, error) {
+func getMessage(context *cli.Context, loggger *zap.Logger) (sarama.StringEncoder, error) {
 	msg := context.String("message")
 	if msg != "" {
 		return sarama.StringEncoder(msg), nil
 	}
-
 	file := context.String("json")
 	if file != "" {
 		jsonFile, err := os.Open(file)
@@ -33,11 +32,10 @@ func getMessage(context *cli.Context) (sarama.StringEncoder, error) {
 		}
 		defer jsonFile.Close()
 
-		byteValue, err := ioutil.ReadAll(jsonFile)
+		byteValue, err := io.ReadAll(jsonFile)
 		if err != nil {
 			return "", err
 		}
-
 		return sarama.StringEncoder(string(byteValue)), nil
 	}
 
@@ -54,7 +52,7 @@ func publishTopicCommandAction(context *cli.Context) error {
 
 	defer close(producer, logger)
 
-	msg, err := getMessage(context)
+	msg, err := getMessage(context, logger)
 	if err != nil {
 		return fmt.Errorf("failed to sent message; %w", err)
 	}
@@ -85,13 +83,11 @@ func PublishTopicCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:     "message",
-				Value:    "xd",
 				Usage:    "kafka consumer group id",
 				Required: false,
 			},
 			&cli.StringFlag{
 				Name:     "json",
-				Value:    "path to file",
 				Usage:    "./consume.json",
 				Required: false,
 			},
