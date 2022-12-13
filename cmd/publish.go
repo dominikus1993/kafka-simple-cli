@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/Shopify/sarama"
@@ -15,6 +18,32 @@ func close(producer sarama.SyncProducer, logger *zap.Logger) {
 		logger.With(zap.Error(err)).Error("failed to shut down data collector cleanly")
 	}
 }
+
+func getMessage(context *cli.Context) (sarama.StringEncoder, error) {
+	msg := context.String("message")
+	if msg != "" {
+		return sarama.StringEncoder(msg), nil
+	}
+
+	file := context.String("json")
+	if file != "" {
+		jsonFile, err := os.Open(file)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer jsonFile.Close()
+
+		byteValue, err := ioutil.ReadAll(jsonFile)
+		if err != nil {
+			return "", err
+		}
+
+		return sarama.StringEncoder(string(byteValue)), nil
+	}
+
+	return "", errors.New("no message or json provided")
+}
+
 func publishTopicCommandAction(context *cli.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
@@ -25,7 +54,11 @@ func publishTopicCommandAction(context *cli.Context) error {
 
 	defer close(producer, logger)
 
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: sarama.StringEncoder(context.String("message"))})
+	msg, err := getMessage(context)
+	if err != nil {
+		return fmt.Errorf("failed to sent message; %w", err)
+	}
+	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: msg})
 	if err != nil {
 		return fmt.Errorf("failed to sent message; %w", err)
 	}
@@ -54,7 +87,13 @@ func PublishTopicCommand() *cli.Command {
 				Name:     "message",
 				Value:    "xd",
 				Usage:    "kafka consumer group id",
-				Required: true,
+				Required: false,
+			},
+			&cli.StringFlag{
+				Name:     "json",
+				Value:    "path to file",
+				Usage:    "./consume.json",
+				Required: false,
 			},
 		},
 		Aliases: []string{"p"},
