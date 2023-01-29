@@ -35,14 +35,14 @@ services:
     # (Adding the "ports" property to this file will not forward from a Codespace.)
 
   zoo:
-    image: confluentinc/cp-zookeeper:7.0.5
+    image: confluentinc/cp-zookeeper:7.3.1
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-kafka:7.0.5
+    image: confluentinc/cp-kafka:7.3.1
     container_name: broker
     ports:
     # To learn about configuring Kafka for access across networks see
