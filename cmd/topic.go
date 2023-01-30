@@ -92,7 +92,7 @@ func ShowTopicCommand() *cli.Command {
 
 func DeleteTopicCommand() *cli.Command {
 	return &cli.Command{
-		Name: "create",
+		Name: "delete",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "broker",
