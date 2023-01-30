@@ -52,6 +52,21 @@ func createTopicCommandAction(context *cli.Context) error {
 	return nil
 }
 
+func deleteTopicCommandAction(context *cli.Context) error {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	admin, err := kafka.NewKafkaAdmin(context.String("broker"))
+	if err != nil {
+		return err
+	}
+	err = admin.DeleteTopic(context.String("topic"))
+	if err != nil {
+		return err
+	}
+	logger.Info("topic deleted")
+	return nil
+}
+
 func ShowTopicCommand() *cli.Command {
 	return &cli.Command{
 		Name: "show",
@@ -72,6 +87,29 @@ func ShowTopicCommand() *cli.Command {
 		Aliases: []string{"s"},
 		Usage:   "show topic info",
 		Action:  showTopicCommandAction,
+	}
+}
+
+func DeleteTopicCommand() *cli.Command {
+	return &cli.Command{
+		Name: "create",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "broker",
+				Value:    "broker:9092",
+				Usage:    "kafka broker addres",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "topic",
+				Value:    "topic-name",
+				Usage:    "topic-name",
+				Required: true,
+			},
+		},
+		Aliases: []string{"c"},
+		Usage:   "delete topic",
+		Action:  deleteTopicCommandAction,
 	}
 }
 
@@ -110,7 +148,7 @@ func CreateTopicCommand() *cli.Command {
 			},
 		},
 		Aliases: []string{"c"},
-		Usage:   "show topic info",
+		Usage:   "create topic",
 		Action:  createTopicCommandAction,
 	}
 }
