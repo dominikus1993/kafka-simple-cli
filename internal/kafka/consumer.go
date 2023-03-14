@@ -7,9 +7,15 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewConsumer(broker, topic, group string) (sarama.ConsumerGroup, error) {
+func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup, error) {
 	config := sarama.NewConfig()
 	config.ClientID = group
+	if offsetreset == "earliest" {
+		config.Consumer.Offsets.Initial = sarama.OffsetNewest
+	}
+	if offsetreset == "latest" {
+		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	}
 	return sarama.NewConsumerGroup(strings.Split(broker, ","), group, config)
 }
 

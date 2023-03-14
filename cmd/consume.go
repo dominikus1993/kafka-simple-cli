@@ -12,8 +12,8 @@ import (
 func consumeTopicCommandAction(context *cli.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
-
-	consumer, err := kafka.NewConsumer(context.String("broker"), context.String("topic"), context.String("groupid"))
+	offsetReset := context.String("offsetReset")
+	consumer, err := kafka.NewConsumer(context.String("broker"), context.String("topic"), context.String("groupid"), offsetReset)
 	if err != nil {
 		return err
 	}
@@ -60,6 +60,12 @@ func ConsumeTopicCommand() *cli.Command {
 				Value:    "broker:9092",
 				Usage:    "kafka broker addres",
 				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "offsetReset",
+				Value:    "latest",
+				Usage:    "offsetReset",
+				Required: false,
 			},
 			&cli.StringFlag{
 				Name:     "topic",
