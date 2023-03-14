@@ -11,10 +11,10 @@ func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup
 	config := sarama.NewConfig()
 	config.ClientID = group
 	if offsetreset == "earliest" {
-		config.Consumer.Offsets.Initial = sarama.OffsetNewest
+		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
 	if offsetreset == "latest" {
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	}
 	return sarama.NewConsumerGroup(strings.Split(broker, ","), group, config)
 }
