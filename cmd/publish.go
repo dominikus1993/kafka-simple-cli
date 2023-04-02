@@ -9,11 +9,12 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/dominikus1993/kafka-simple-cli/internal/kafka"
+	kafkago "github.com/segmentio/kafka-go"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
 
-func close(producer sarama.SyncProducer, logger *zap.Logger) {
+func close(producer *kafkago.Writer, logger *zap.Logger) {
 	if err := producer.Close(); err != nil {
 		logger.With(zap.Error(err)).Error("failed to shut down data collector cleanly")
 	}
@@ -45,23 +46,22 @@ func getMessage(context *cli.Context, loggger *zap.Logger) (sarama.StringEncoder
 func publishTopicCommandAction(context *cli.Context) error {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
-	producer, err := kafka.NewProducer(strings.Split(context.String("broker"), ","))
+	producer, err := kafka.NewProducer(strings.Split(context.String("broker"), ","), context.String("topic"))
 	if err != nil {
 		return err
 	}
 
 	defer close(producer, logger)
 
-	msg, err := getMessage(context, logger)
-	if err != nil {
-		return fmt.Errorf("failed to sent message; %w", err)
+	message := kafkago.Message{
+		Value: []byte("exampleValue"),
 	}
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: msg})
+	err = producer.WriteMessages(context.Context, message)
 	if err != nil {
 		return fmt.Errorf("failed to sent message; %w", err)
 	}
 
-	logger.With(zap.Int32("partition", partition), zap.Int64("offset", offset)).Info("message sent")
+	logger.Info("message sent")
 	return nil
 }
 
