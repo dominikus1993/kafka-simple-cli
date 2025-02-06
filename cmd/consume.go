@@ -78,7 +78,7 @@ func ConsumeTopicCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:        "key",
-				Value:       "xd",
+				Value:       "",
 				Usage:       "kafka key for filtering",
 				DefaultText: "",
 				Required:    false,
