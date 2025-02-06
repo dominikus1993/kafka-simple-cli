@@ -107,7 +107,7 @@ func DeleteTopicCommand() *cli.Command {
 				Required: true,
 			},
 		},
-		Aliases: []string{"c"},
+		Aliases: []string{"d"},
 		Usage:   "delete topic",
 		Action:  deleteTopicCommandAction,
 	}

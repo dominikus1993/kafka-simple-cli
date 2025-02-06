@@ -7,6 +7,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/k0kubun/pp/v3"
+	"go.uber.org/zap"
 )
 
 func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup, error) {
@@ -23,12 +24,13 @@ func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
-	Ready chan bool
-	Key   string
+	Ready  chan bool
+	Key    string
+	Logger *zap.Logger
 }
 
-func NewKafkaConsumer(ready chan bool, key string) *Consumer {
-	return &Consumer{Ready: ready, Key: key}
+func NewKafkaConsumer(ready chan bool, key string, logger *zap.Logger) *Consumer {
+	return &Consumer{Ready: ready, Key: key, Logger: logger}
 }
 
 func (consumer *Consumer) SetReady(ready chan bool) {
@@ -57,9 +59,9 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 		select {
 		case message := <-claim.Messages():
 			if consumer.Key == "" {
-				printMessage(message)
+				consumer.printMessage(message)
 			} else if consumer.Key == string(message.Key) {
-				printMessage(message)
+				consumer.printMessage(message)
 			}
 			session.MarkMessage(message, "")
 
@@ -72,19 +74,19 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	}
 }
 
-func printMessage(message *sarama.ConsumerMessage) {
+func (consumer *Consumer) printMessage(message *sarama.ConsumerMessage) {
 	jsonDecoder := json.NewDecoder(bytes.NewReader(message.Value))
 	jsonDecoder.UseNumber() // enable useNumber for preventing float
 
 	var decodedData map[string]interface{}
 	err := jsonDecoder.Decode(&decodedData)
 	if err != nil {
-		panic(err)
+		consumer.Logger.Error("failed to decode message", zap.Error(err))
 	}
 
 	data := map[string]any{
 		"key":       string(message.Key),
-		"value":     decodedData,
+		"message":   decodedData,
 		"timestamp": message.Timestamp,
 		"topic":     message.Topic,
 		"headers":   message.Headers,

@@ -19,7 +19,7 @@ func close(producer sarama.SyncProducer, logger *zap.Logger) {
 	}
 }
 
-func getMessage(context *cli.Context, loggger *zap.Logger) (sarama.StringEncoder, error) {
+func getMessage(context *cli.Context) (sarama.StringEncoder, error) {
 	msg := context.String("message")
 	if msg != "" {
 		return sarama.StringEncoder(msg), nil
@@ -52,11 +52,18 @@ func publishTopicCommandAction(context *cli.Context) error {
 
 	defer close(producer, logger)
 
-	msg, err := getMessage(context, logger)
+	msg, err := getMessage(context)
 	if err != nil {
 		return fmt.Errorf("failed to sent message; %w", err)
 	}
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: msg})
+	key := context.String("key")
+	var partition int32
+	var offset int64
+	if key == "" {
+		partition, offset, err = producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: msg})
+	} else {
+		partition, offset, err = producer.SendMessage(&sarama.ProducerMessage{Topic: context.String("topic"), Value: msg, Key: sarama.StringEncoder(context.String("key"))})
+	}
 	if err != nil {
 		return fmt.Errorf("failed to sent message; %w", err)
 	}
@@ -84,6 +91,11 @@ func PublishTopicCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:     "message",
 				Usage:    "kafka consumer group id",
+				Required: false,
+			},
+			&cli.StringFlag{
+				Name:     "key",
+				Usage:    "kafka key",
 				Required: false,
 			},
 			&cli.StringFlag{

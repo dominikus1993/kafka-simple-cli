@@ -19,7 +19,7 @@ func consumeTopicCommandAction(context *cli.Context) error {
 	}
 	wg, ctx := errgroup.WithContext(context.Context)
 	ready := make(chan bool)
-	kafkaconsumer := kafka.NewKafkaConsumer(ready, context.String("key"))
+	kafkaconsumer := kafka.NewKafkaConsumer(ready, context.String("key"), logger)
 	wg.Go(func() error {
 		for {
 			// `Consume` should be called inside an infinite loop, when a
@@ -75,6 +75,13 @@ func ConsumeTopicCommand() *cli.Command {
 				Value:    "xd",
 				Usage:    "kafka consumer group id",
 				Required: true,
+			},
+			&cli.StringFlag{
+				Name:        "key",
+				Value:       "xd",
+				Usage:       "kafka key for filtering",
+				DefaultText: "",
+				Required:    false,
 			},
 		},
 		Aliases: []string{"cs"},
