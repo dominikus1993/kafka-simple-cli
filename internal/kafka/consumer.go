@@ -1,10 +1,12 @@
 package kafka
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 
-	"github.com/Shopify/sarama"
-	"go.uber.org/zap"
+	"github.com/IBM/sarama"
+	"github.com/k0kubun/pp/v3"
 )
 
 func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup, error) {
@@ -21,12 +23,12 @@ func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
-	Ready  chan bool
-	logger *zap.Logger
+	Ready chan bool
+	Key   string
 }
 
-func NewKafkaConsumer(ready chan bool, logger *zap.Logger) *Consumer {
-	return &Consumer{Ready: ready, logger: logger}
+func NewKafkaConsumer(ready chan bool, key string) *Consumer {
+	return &Consumer{Ready: ready, Key: key}
 }
 
 func (consumer *Consumer) SetReady(ready chan bool) {
@@ -50,18 +52,44 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	// NOTE:
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
-	// https://github.com/Shopify/sarama/blob/main/consumer_group.go#L27-L29
+	// https://github.com/IBM/sarama/blob/main/consumer_group.go#L27-L29
 	for {
 		select {
 		case message := <-claim.Messages():
-			consumer.logger.With(zap.String("message", string(message.Value)), zap.Time("timestamp", message.Timestamp), zap.String("topic", message.Topic)).Info("Message claimed")
+			if consumer.Key == "" {
+				printMessage(message)
+			} else if consumer.Key == string(message.Key) {
+				printMessage(message)
+			}
 			session.MarkMessage(message, "")
 
 		// Should return when `session.Context()` is done.
 		// If not, will raise `ErrRebalanceInProgress` or `read tcp <ip>:<port>: i/o timeout` when kafka rebalance. see:
-		// https://github.com/Shopify/sarama/issues/1192
+		// https://github.com/IBM/sarama/issues/1192
 		case <-session.Context().Done():
 			return nil
 		}
 	}
+}
+
+func printMessage(message *sarama.ConsumerMessage) {
+	jsonDecoder := json.NewDecoder(bytes.NewReader(message.Value))
+	jsonDecoder.UseNumber() // enable useNumber for preventing float
+
+	var decodedData map[string]interface{}
+	err := jsonDecoder.Decode(&decodedData)
+	if err != nil {
+		panic(err)
+	}
+
+	data := map[string]any{
+		"key":       string(message.Key),
+		"value":     decodedData,
+		"timestamp": message.Timestamp,
+		"topic":     message.Topic,
+		"headers":   message.Headers,
+		"offset":    message.Offset,
+		"partition": message.Partition,
+	}
+	pp.Println(data)
 }

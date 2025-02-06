@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/dominikus1993/kafka-simple-cli/internal/kafka"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"

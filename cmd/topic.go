@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/dominikus1993/kafka-simple-cli/internal/kafka"
 	"github.com/k0kubun/pp/v3"
 	"github.com/urfave/cli/v2"

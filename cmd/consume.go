@@ -19,10 +19,7 @@ func consumeTopicCommandAction(context *cli.Context) error {
 	}
 	wg, ctx := errgroup.WithContext(context.Context)
 	ready := make(chan bool)
-	kafkaconsumer := kafka.NewKafkaConsumer(ready, logger)
-	if err != nil {
-		return err
-	}
+	kafkaconsumer := kafka.NewKafkaConsumer(ready, context.String("key"))
 	wg.Go(func() error {
 		for {
 			// `Consume` should be called inside an infinite loop, when a
