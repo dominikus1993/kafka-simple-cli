@@ -58,7 +58,6 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	for {
 		select {
 		case message := <-claim.Messages():
-			pp.Print(consumer.Key)
 			if consumer.Key == "" {
 				consumer.printMessage(message)
 			} else if consumer.Key == string(message.Key) {
