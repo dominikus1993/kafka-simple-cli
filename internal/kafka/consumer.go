@@ -24,13 +24,14 @@ func NewConsumer(broker, topic, group, offsetreset string) (sarama.ConsumerGroup
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
-	Ready  chan bool
-	Key    string
-	Logger *zap.Logger
+	Ready   chan bool
+	Key     string
+	Logger  *zap.Logger
+	ShowMsg bool
 }
 
-func NewKafkaConsumer(ready chan bool, key string, logger *zap.Logger) *Consumer {
-	return &Consumer{Ready: ready, Key: key, Logger: logger}
+func NewKafkaConsumer(ready chan bool, key string, logger *zap.Logger, showMsg bool) *Consumer {
+	return &Consumer{Ready: ready, Key: key, Logger: logger, ShowMsg: showMsg}
 }
 
 func (consumer *Consumer) SetReady(ready chan bool) {
@@ -75,23 +76,34 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 }
 
 func (consumer *Consumer) printMessage(message *sarama.ConsumerMessage) {
-	jsonDecoder := json.NewDecoder(bytes.NewReader(message.Value))
-	jsonDecoder.UseNumber() // enable useNumber for preventing float
+	var data map[string]any
+	if consumer.ShowMsg {
+		jsonDecoder := json.NewDecoder(bytes.NewReader(message.Value))
+		jsonDecoder.UseNumber() // enable useNumber for preventing float
 
-	var decodedData map[string]interface{}
-	err := jsonDecoder.Decode(&decodedData)
-	if err != nil {
-		consumer.Logger.Error("failed to decode message", zap.Error(err))
-	}
-
-	data := map[string]any{
-		"key":       string(message.Key),
-		"message":   decodedData,
-		"timestamp": message.Timestamp,
-		"topic":     message.Topic,
-		"headers":   message.Headers,
-		"offset":    message.Offset,
-		"partition": message.Partition,
+		var decodedData map[string]interface{}
+		err := jsonDecoder.Decode(&decodedData)
+		if err != nil {
+			consumer.Logger.Error("failed to decode message", zap.Error(err))
+		}
+		data = map[string]any{
+			"key":       string(message.Key),
+			"message":   decodedData,
+			"timestamp": message.Timestamp,
+			"topic":     message.Topic,
+			"headers":   message.Headers,
+			"offset":    message.Offset,
+			"partition": message.Partition,
+		}
+	} else {
+		data = map[string]any{
+			"key":       string(message.Key),
+			"timestamp": message.Timestamp,
+			"topic":     message.Topic,
+			"headers":   message.Headers,
+			"offset":    message.Offset,
+			"partition": message.Partition,
+		}
 	}
 	pp.Println(data)
 }
