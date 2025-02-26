@@ -1,6 +1,6 @@
 module github.com/dominikus1993/kafka-simple-cli
 
-go 1.23
+go 1.24
 
 require (
 	github.com/IBM/sarama v1.45.0
